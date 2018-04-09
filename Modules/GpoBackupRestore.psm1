@@ -10,11 +10,11 @@ function Get-GpoPermission {
     begin {
     }
     process {
-        [adsi]('LDAP://CN={' + $InputObject.Id + '},CN=Policies,CN=System,' + ([adsi]'LDAP://RootDSE').defaultNamingContext) |
+        [adsi]('LDAP://CN={' + $InputObject.Id.Guid + '},CN=Policies,CN=System,' + ([adsi]'LDAP://RootDSE').defaultNamingContext) |
             Get-ADObjectAccessRight |
             ForEach-Object {
-                $_.Parent_canonicalName = $_.Parent_canonicalName -replace("$($InputObject.Id)","$($InputObject.DisplayName)")
-                $_.Parent_distinguishedName = $_.Parent_distinguishedName -replace("$($InputObject.Id)","$($InputObject.DisplayName)")
+                $_.Parent_canonicalName = $_.Parent_canonicalName.ToLower().Replace("$($InputObject.Id.Guid.ToLower())","$($InputObject.DisplayName)")
+                $_.Parent_distinguishedName = $_.Parent_distinguishedName.ToLower().Replace("$($InputObject.Id.Guid.ToLower())","$($InputObject.DisplayName)")
                 $_
             }
     }
@@ -37,8 +37,19 @@ function Set-GpoPermission {
     }
     process {
         $gpo = Get-GPO -DisplayName $InputObject.Parent_canonicalName.split('/')[-1].Trim('{}')
-        $_.Parent_canonicalName = $_.Parent_canonicalName -replace("$($gpo.DisplayName)","$($gpo.Id)")
-        $_.Parent_distinguishedName = $_.Parent_distinguishedName -replace("$($gpo.DisplayName)","$($gpo.Id)")
+        Write-Verbose -Message ("[    ] Set-GpoPermission : {0}" -f $gpo.DisplayName)
+        $_.Parent_canonicalName = $_.Parent_canonicalName.ToLower().Replace("$($gpo.DisplayName.ToLower())","$($gpo.Id.Guid)")
+        $_.Parent_distinguishedName = $_.Parent_distinguishedName.ToLower().Replace("$($gpo.DisplayName.ToLower())","$($gpo.Id.Guid)")
+        $_.Parent_distinguishedName |
+            Get-ADDirectoryEntry |             
+            Remove-ADObjectAccessRight `
+                -IdentityReference 'NT AUTHORITY\Authenticated Users' `
+                -ActiveDirectoryRights 'ExtendedRight' `
+                -AccessControlType 'Allow' `
+                -ObjectType 'edacfd8f-ffb3-11d1-b41d-00a0c968f939' `
+                -InheritanceType 'All' `
+                -InheritedObjectType '00000000-0000-0000-0000-000000000000' `
+                -Confirm:(-not $Force)       
         $_ | Set-ADObjectAccessRight -Force:($Force)
     }
     end {
@@ -55,13 +66,10 @@ function Get-GpoLink {
     )
 
     begin {
-        [string[]]$organizationalUnits = Get-ADOrganizationalUnit -Filter * | 
-            Select-Object -ExpandProperty distinguishedName
-        $organizationalUnits += ([adsi]'LDAP://RootDSE').defaultNamingContext
-        $gpoLinks = $organizationalUnits |
-            Get-GPInheritance |
-            Select-Object -ExpandProperty GpoLinks
-        Remove-Variable -Name organizationalUnits
+        $gpoLinks = [string[]](Get-ADOrganizationalUnit -Filter * | Select-Object -ExpandProperty distinguishedName) + `
+            [string[]]([adsi]'LDAP://RootDSE').defaultNamingContext |
+                Get-GPInheritance |
+                Select-Object -ExpandProperty GpoLinks
     }
     process {
         $gpoLinks |
@@ -96,9 +104,9 @@ function Set-GpoLink {
     begin {
     }
     process {
+        Write-Verbose -Message ("[    ] Set-GpoLink : {0} -> {1}" -f $InputObject.DisplayName, $InputObject.LinkTarget)
             if (
-                (Get-ADOrganizationalUnit -Identity $InputObject.LinkTarget |
-                Get-GPInheritance |
+                (Get-GPInheritance -Target $InputObject.LinkTarget |
                 Select-Object -ExpandProperty GpoLinks |
                 Select-Object -ExpandProperty DisplayName) -contains $InputObject.DisplayName
             ) {
@@ -107,11 +115,45 @@ function Set-GpoLink {
             else {
                 New-GPLink -Name $_.DisplayName -Target $_.LinkTarget -Order $_.LinkOrder -LinkEnabled $_.LinkEnabled -Enforced $_.LinkEnforced 
             }
+    }
+    end {
+    }
+}
+
+function Get-GpoWmiFiler {
+    [CmdletBinding()]
+
+    param(
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)] 
+        $InputObject
+    )
+
+    begin {
+    }
+    process {
 
     }
     end {
     }
 }
+
+function Set-GpoWmiFiler {
+    [CmdletBinding()]
+
+    param(
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)] 
+        $InputObject
+    )
+
+    begin {
+    }
+    process {
+
+    }
+    end {
+    }
+}
+
 function Backup-Gpo {
     [CmdletBinding()]
 
@@ -152,7 +194,7 @@ function Backup-Gpo {
     end {
         Get-ADObject -SearchBase ('CN=Partitions,CN=Configuration,' + ([adsi]'LDAP://RootDSE').defaultNamingContext) -Filter * -Properties netbiosname | 
             Select-Object -ExpandProperty netbiosname |
-            Out-File -FilePath (Join-Path -Path $Path -ChildPath 'netbiosname.config')
+            Out-File -FilePath (Join-Path -Path $Path -ChildPath 'ace.netbiosname')
     }
 }
 
@@ -168,13 +210,14 @@ function Restore-Gpo {
     )
 
     begin {
-        $netBiosName_source = Get-Content (Join-Path -Path $Path -ChildPath 'netbiosname.config').trim()
+        $netBiosName_source = Get-Content (Join-Path -Path $Path -ChildPath 'ace.netbiosname').trim()
         $netBiosName_target = Get-ADObject -SearchBase ('CN=Partitions,CN=Configuration,' + ([adsi]'LDAP://RootDSE').defaultNamingContext) -Filter * -Properties netbiosname | 
             Select-Object -ExpandProperty netbiosname  
     }
     process {
         Import-Csv -Path (Join-Path -Path $Path -ChildPath 'policy.config.csv') | 
             ForEach-Object {
+                Write-Verbose -Message ("[    ] Restore-Gpo : {0}" -f $_.DisplayName)
                 if ($MigrationTable.Length -gt 0) {
                     GroupPolicy\Import-GPO -CreateIfNeeded -BackupGpoName $_.DisplayName -TargetName $_.DisplayName -Path $Path -MigrationTable $MigrationTable
                 } 
@@ -189,13 +232,13 @@ function Restore-Gpo {
                 $_.IdentityReference = $_.IdentityReference.ToUpper().replace("$($netBiosName_source)\","$($netBiosName_target)\")
                 $_.Parent_canonicalName = (([adsi]'LDAP://RootDSE').defaultNamingContext -replace('dc=','') -replace(',','.')) + $_.Parent_canonicalName.SubString($_.Parent_canonicalName.IndexOf('/'))
                 $_.Parent_distinguishedName = $_.Parent_distinguishedName.SubString(0,$_.Parent_distinguishedName.ToUpper().IndexOf('DC=')) + ([adsi]"LDAP://RootDSE").defaultNamingContext
-                $_ | Set-GpoPermission -Force
+                $_ | Set-GpoPermission -Force -Verbose:$VerbosePreference
             }
 
         Import-Csv -Path (Join-Path -Path $Path -ChildPath 'link.config.csv') | 
             ForEach-Object {        
                 $_.LinkTarget = $_.LinkTarget.SubString(0,$_.LinkTarget.ToUpper().IndexOf('DC=')) + ([adsi]"LDAP://RootDSE").defaultNamingContext
-                $_ | Set-GpoLink
+                $_ | Set-GpoLink -Verbose:$VerbosePreference
             }
     }
     end {
