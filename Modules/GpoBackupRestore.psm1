@@ -229,7 +229,7 @@ function Restore-Gpo {
         Import-Csv -Path (Join-Path -Path $Path -ChildPath 'ace.config.csv') | 
             ForEach-Object {
                 $_.__AddRemoveIndicator = 1
-                $_.IdentityReference = $_.IdentityReference.ToUpper().replace("$($netBiosName_source)\","$($netBiosName_target)\")
+                $_.IdentityReference = $_.IdentityReference.ToUpper().Replace("$($netBiosName_source.ToUpper())\","$($netBiosName_target.ToUpper())\")
                 $_.Parent_canonicalName = (([adsi]'LDAP://RootDSE').defaultNamingContext -replace('dc=','') -replace(',','.')) + $_.Parent_canonicalName.SubString($_.Parent_canonicalName.IndexOf('/'))
                 $_.Parent_distinguishedName = $_.Parent_distinguishedName.SubString(0,$_.Parent_distinguishedName.ToUpper().IndexOf('DC=')) + ([adsi]"LDAP://RootDSE").defaultNamingContext
                 $_ | Set-GpoPermission -Force -Verbose:$VerbosePreference
