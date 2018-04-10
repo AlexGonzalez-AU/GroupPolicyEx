@@ -204,7 +204,13 @@ function Restore-Gpo {
     param(
         [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=0)]
         $Path,
-        [Parameter(Mandatory=$false,ValueFromPipeline=$false,Position=1)]
+        [Parameter(Mandatory=$false,ValueFromPipeline=$false,Position=1,ParameterSetName='Parameter Set 1')]
+        [switch]
+        $LinksOnly,
+        [Parameter(Mandatory=$false,ValueFromPipeline=$false,Position=2,ParameterSetName='Parameter Set 2')]
+        [switch]
+        $PermissionsOnly,                
+        [Parameter(Mandatory=$false,ValueFromPipeline=$false,Position=3)]
         [string]
         $MigrationTable=""
     )
@@ -215,33 +221,40 @@ function Restore-Gpo {
             Select-Object -ExpandProperty netbiosname  
     }
     process {
-        Import-Csv -Path (Join-Path -Path $Path -ChildPath 'policy.config.csv') | 
-            ForEach-Object {
-                Write-Verbose -Message ("[    ] Restore-Gpo : {0}" -f $_.DisplayName)
-                if ($MigrationTable.Length -gt 0) {
-                    GroupPolicy\Import-GPO -CreateIfNeeded -BackupGpoName $_.DisplayName -TargetName $_.DisplayName -Path $Path -MigrationTable $MigrationTable
-                } 
-                else {
-                    GroupPolicy\Import-GPO -CreateIfNeeded -BackupGpoName $_.DisplayName -TargetName $_.DisplayName -Path $Path
+        if ((-not $LinksOnly) -and (-not $PermissionsOnly)) {
+            Import-Csv -Path (Join-Path -Path $Path -ChildPath 'policy.config.csv') | 
+                ForEach-Object {
+                    Write-Verbose -Message ("[    ] Restore-Gpo : {0}" -f $_.DisplayName)
+                    if ($MigrationTable.Length -gt 0) {
+                        GroupPolicy\Import-GPO -CreateIfNeeded -BackupGpoName $_.DisplayName -TargetName $_.DisplayName -Path $Path -MigrationTable $MigrationTable
+                    } 
+                    else {
+                        GroupPolicy\Import-GPO -CreateIfNeeded -BackupGpoName $_.DisplayName -TargetName $_.DisplayName -Path $Path
+                    }
                 }
-            }
+            $LinksOnly = $PermissionsOnly = $true
+        }
 
-        Import-Csv -Path (Join-Path -Path $Path -ChildPath 'ace.config.csv') | 
-            ForEach-Object {
-                if ($_.IsInherited -eq 'False') {
-                    $_.__AddRemoveIndicator = 1
+        if ($PermissionsOnly) {
+            Import-Csv -Path (Join-Path -Path $Path -ChildPath 'ace.config.csv') | 
+                ForEach-Object {
+                    if ($_.IsInherited -eq 'False') {
+                        $_.__AddRemoveIndicator = 1
+                    }
+                    $_.IdentityReference = $_.IdentityReference.ToUpper().Replace("$($netBiosName_source.ToUpper())\","$($netBiosName_target.ToUpper())\")
+                    $_.Parent_canonicalName = (([adsi]'LDAP://RootDSE').defaultNamingContext -replace('dc=','') -replace(',','.')) + $_.Parent_canonicalName.SubString($_.Parent_canonicalName.IndexOf('/'))
+                    $_.Parent_distinguishedName = $_.Parent_distinguishedName.SubString(0,$_.Parent_distinguishedName.ToUpper().IndexOf('DC=')) + ([adsi]"LDAP://RootDSE").defaultNamingContext
+                    $_ | Set-GpoPermission -Force -Verbose:$VerbosePreference
                 }
-                $_.IdentityReference = $_.IdentityReference.ToUpper().Replace("$($netBiosName_source.ToUpper())\","$($netBiosName_target.ToUpper())\")
-                $_.Parent_canonicalName = (([adsi]'LDAP://RootDSE').defaultNamingContext -replace('dc=','') -replace(',','.')) + $_.Parent_canonicalName.SubString($_.Parent_canonicalName.IndexOf('/'))
-                $_.Parent_distinguishedName = $_.Parent_distinguishedName.SubString(0,$_.Parent_distinguishedName.ToUpper().IndexOf('DC=')) + ([adsi]"LDAP://RootDSE").defaultNamingContext
-                $_ | Set-GpoPermission -Force -Verbose:$VerbosePreference
-            }
+        }
 
-        Import-Csv -Path (Join-Path -Path $Path -ChildPath 'link.config.csv') | 
-            ForEach-Object {        
-                $_.LinkTarget = $_.LinkTarget.SubString(0,$_.LinkTarget.ToUpper().IndexOf('DC=')) + ([adsi]"LDAP://RootDSE").defaultNamingContext
-                $_ | Set-GpoLink -Verbose:$VerbosePreference
-            }
+        if ($LinksOnly) {
+            Import-Csv -Path (Join-Path -Path $Path -ChildPath 'link.config.csv') | 
+                ForEach-Object {        
+                    $_.LinkTarget = $_.LinkTarget.SubString(0,$_.LinkTarget.ToUpper().IndexOf('DC=')) + ([adsi]"LDAP://RootDSE").defaultNamingContext
+                    $_ | Set-GpoLink -Verbose:$VerbosePreference
+                }
+        }
     }
     end {
     }
