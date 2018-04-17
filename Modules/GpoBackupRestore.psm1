@@ -278,11 +278,11 @@ function Restore-Gpo {
                     }
                     $_.IdentityReference = $_.IdentityReference.ToUpper().Replace("$($netBiosName_source.ToUpper())\","$($netBiosName_target.ToUpper())\")
                     if ($_.Parent_canonicalName -like "*/*") {
-                        $_.Parent_canonicalName = Join-Path -Path (([adsi]'LDAP://RootDSE').defaultNamingContext -replace('dc=','') -replace(',','.')) -ChildPath $_.Parent_canonicalName.SubString($_.Parent_canonicalName.IndexOf('/'))
+                        $_.Parent_canonicalName = (([adsi]'LDAP://RootDSE').defaultNamingContext.ToString() -replace('dc=','') -replace(',','.')) + $_.Parent_canonicalName.SubString($_.Parent_canonicalName.IndexOf('/'))
                     }
                     else {
                         $_.Parent_canonicalName = ([adsi]'LDAP://RootDSE').defaultNamingContext -replace('dc=','') -replace(',','.')
-                    }                    
+                    }    
                     $_.Parent_distinguishedName = $_.Parent_distinguishedName.SubString(0,$_.Parent_distinguishedName.ToUpper().IndexOf('DC=')) + ([adsi]"LDAP://RootDSE").defaultNamingContext
                     $_ | Set-GpoPermission -Force -Verbose:$VerbosePreference
                 }
