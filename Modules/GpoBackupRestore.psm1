@@ -327,8 +327,7 @@ function New-GpoMigrationTable {
     }
     process {
         $r = Get-GPOReport -DisplayName $GpoDisplayName -ReportType Html
-        $r.split("`n") | Select-String -Pattern ('(?xi) ' + $netbiosname + ' \\ [\w\s]+') | 
-            Select-Object -ExpandProperty matches | 
+        [regex]::Matches($r,'(?xi) ' + $netbiosname + ' \\ [\w\s]+') |
             Select-Object -ExpandProperty value | 
             ForEach-Object {
                 if (-not ($samAccountNames -contains $_)) {
