@@ -28,7 +28,11 @@ function Test-XmlProperty {
 
 $sb = {
     foreach ($gpo in (Get-GPO -All -Domain $Domain)) { 
-            Write-Host ("Searching: '{0}'..." -f $gpo.displayname)
+        if (!$gpo.displayname) {
+            Write-Warning -Message ("GPO is missing from SYSVOL '{0}'" -f $gpo.id.guid)
+            continue
+        }
+        Write-Host ("Searching: '{0}'..." -f $gpo.displayname)
 
             [xml]$xmlReport = $gpo | Get-GPOReport -ReportType Xml -Domain $Domain
 

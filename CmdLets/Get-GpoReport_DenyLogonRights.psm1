@@ -8,6 +8,10 @@ Import-Module GroupPolicy
 
 $sb = {
     foreach ($gpo in (Get-GPO -All -Domain $Domain)) {
+        if (!$gpo.displayname) {
+            Write-Warning -Message ("GPO is missing from SYSVOL '{0}'" -f $gpo.id.guid)
+            continue
+        }
         Write-Host ("Searching: '{0}'..." -f $gpo.displayname)
 
         ($gpo | Get-GPOReport -ReportType Html -Domain $Domain).split("`n") |
