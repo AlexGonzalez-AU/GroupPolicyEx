@@ -1,0 +1,5 @@
+GpoEditDeleteModifySecurity --> 'Enterprise Admins'            
+GpoEditDeleteModifySecurity --> 'Domain Admins'                
+GpoEditDeleteModifySecurity --> 'SYSTEM'                       
+GpoRead                     --> 'Authenticated Users'          
+GpoRead                     --> 'ENTERPRISE DOMAIN CONTROLLERS'
