@@ -7,8 +7,6 @@ function Get-GpoReport_AllowLogonRights {
         [switch]$AsCsvFile
     )
 
-    Import-Module GroupPolicy
-
     $sb = {
         foreach ($gpo in (Get-GPO -All -Domain $Domain)) {
             if (!$gpo.displayname) {

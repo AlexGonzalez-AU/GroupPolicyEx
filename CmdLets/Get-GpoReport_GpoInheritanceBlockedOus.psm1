@@ -7,8 +7,6 @@ function Get-GpoReport_GpoInheritanceBlockedOus {
         [switch]$AsCsvFile
     )
 
-    Import-Module ActiveDirectory, GroupPolicy
-
     $sb = {
         Get-ADOrganizationalUnit -Filter * -Server $Domain -Properties canonicalName | 
             ForEach-Object {

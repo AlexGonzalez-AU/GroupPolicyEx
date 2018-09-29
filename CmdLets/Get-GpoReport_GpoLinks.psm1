@@ -7,8 +7,6 @@ function Get-GpoReport_GpoLinks {
         [switch]$AsCsvFile
     )
 
-    Import-Module GroupPolicy
-
     Set-StrictMode -Version 2
     $ErrorActionPreference = 'Stop'
 
