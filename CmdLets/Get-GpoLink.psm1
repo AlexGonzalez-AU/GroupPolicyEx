@@ -1,72 +1,36 @@
-param (
-    [Parameter(Mandatory=$false,ValueFromPipeline=$true,Position=0)]    
-    [string]$Domain = (New-Object system.directoryservices.directoryentry).distinguishedname.tolower().replace('dc=','').replace(',','.'),
-    [switch]$AsCsvFile
-)
-
-Import-Module GroupPolicy
-
-Set-StrictMode -Version 2
-$ErrorActionPreference = 'Stop'
-
-function Test-XmlProperty {
+function Get-GpoLink {
     [CmdletBinding()]
 
-    param (
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-        $XmlPath,
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-        [string]$Property
+    param(
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0)] 
+        [Microsoft.GroupPolicy.Gpo]   
+        $InputObject
     )
 
-    [string[]]$properties = $XmlPath | 
-        Get-Member -MemberType Properties | 
-        Select-Object -ExpandProperty Name
-
-    $properties -Contains($Property)
-}
-
-$sb = {
-    foreach ($gpo in (Get-GPO -All -Domain $Domain)) {
-        if (!$gpo.displayname) {
-            Write-Warning -Message ("GPO is missing from SYSVOL '{0}'" -f $gpo.id.guid)
-            continue
-        }
-        Write-Host ("Checking: '{0}'..." -f $gpo.displayname)
-
-        [xml]$xmlReport = $gpo | Get-GPOReport -ReportType Xml -Domain $Domain
-
-        if (!($xmlReport | Test-XmlProperty -Property 'GPO')) {
-            continue
-        }
-        if (!($xmlReport.GPO | Test-XmlProperty -Property 'LinksTo')) {
-            New-Object -TypeName psobject -Property @{
-                GpoDisplayName = $gpo.DisplayName
-                GpoGuid = $gpo.id.guid
-                LinkEnabled = $null
-                LinkEnforced = $null
-                LinkName = $null
-                LinkPath = $null
-            }  
-            continue
-        }
-        foreach ($link in $xmlReport.GPO.LinksTo) {
-            New-Object -TypeName psobject -Property @{
-                GpoDisplayName = $gpo.DisplayName
-                GpoGuid = $gpo.id.guid
-                LinkEnabled = $link.Enabled
-                LinkEnforced = $link.NoOverride
-                LinkName = $link.SOMName
-                LinkPath = $link.SOMPath
-            }       
-        }    
+    begin {
+        $gpoLinks = [string[]](Get-ADOrganizationalUnit -Filter * | Select-Object -ExpandProperty distinguishedName) + `
+            [string[]]([adsi]'LDAP://RootDSE').defaultNamingContext |
+                Get-GPInheritance |
+                Select-Object -ExpandProperty GpoLinks
     }
-}
-
-if ($AsCsvFile) {
-    & $sb |
-        Export-Csv -NoTypeInformation -Path (".\{0} Get-GpoLink.csv" -f $Domain.Split('.').ToUpper())    
-}
-else {
-    & $sb
+    process {
+        $gpoLinks |
+            Where-Object {
+                $_.DisplayName -eq $InputObject.DisplayName
+            } |
+            ForEach-Object {
+                if ($_.Enabled) {$linkEnabled = 'Yes'} else {$linkEnabled = 'No'}
+                if ($_.Enforced) {$linkEnforced = 'Yes'} else {$linkEnforced = 'No'}
+                New-Object -TypeName psobject -Property @{
+                   'Id' = $_.GpoId
+                   'DisplayName' = $_.DisplayName
+                   'LinkOrder' = $_.Order
+                   'LinkEnabled' = $linkEnabled
+                   'LinkEnforced' = $linkEnforced
+                   'LinkTarget' = $_.Target
+                }
+            }
+    }
+    end {
+    } 
 }
