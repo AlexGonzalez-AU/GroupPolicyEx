@@ -1,3 +1,5 @@
+break 
+
 param (
     [Parameter(Mandatory=$false,ValueFromPipeline=$true,Position=0)]    
     [string]$Domain = (New-Object system.directoryservices.directoryentry).distinguishedname.tolower().replace('dc=','').replace(',','.')
