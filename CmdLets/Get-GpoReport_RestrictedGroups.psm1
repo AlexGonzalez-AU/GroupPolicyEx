@@ -106,6 +106,14 @@ function Get-GpoReport_RestrictedGroups {
                     if (($ExtensionData.Extension | Test-XmlProperty -Property 'LocalUsersAndGroups')) {
                         if (($ExtensionData.Extension.LocalUsersAndGroups | Test-XmlProperty -Property 'Group')) {
                             foreach ($group in $ExtensionData.Extension.LocalUsersAndGroups.Group) {
+                                $groupName = $null
+                                if (($group.Properties | Test-XmlProperty -Property 'groupName')) {
+                                    $groupName = $group.Properties.groupName
+                                }
+                                $groupSid = $null            
+                                if (($group.Properties | Test-XmlProperty -Property 'groupSid')) {
+                                    $groupSid = $group.Properties.groupSid
+                                }  
                                 if (!($group.Properties.Members | Test-XmlProperty -Property 'Member')) {
                                     New-Object -TypeName psobject -Property @{
                                         GpoDisplayName = $gpo.DisplayName
@@ -115,21 +123,29 @@ function Get-GpoReport_RestrictedGroups {
                                         RestrictedGroupSid = $null
                                         MemberName = '<empty>'
                                         MemberSid = '<empty>'
-                                        LocalGroupName = $group.Properties.groupName
-                                        LocalGroupSid = $group.Properties.groupSid
+                                        LocalGroupName = $groupName
+                                        LocalGroupSid = $groupSid
                                         SettingType = "Preferences:LocalUsersAndGroups"
                                     }
                                 }
                                 else {            
                                     foreach ($member in $group.Properties.Members.Member) {
+                                        $memberName = $null
+                                        if (($member | Test-XmlProperty -Property 'name')) {
+                                            $memberName = $member.name
+                                        }
+                                        $memberSid = $null            
+                                        if (($member | Test-XmlProperty -Property 'sid')) {
+                                            $memberSid = $member.sid
+                                        }                                        
                                         New-Object -TypeName psobject -Property @{
                                             GpoDisplayName = $gpo.DisplayName
                                             GpoGuid = $gpo.id.guid
                                             Action = $group.Properties.action
                                             RestrictedGroupName = $null
                                             RestrictedGroupSid = $null
-                                            MemberName = "[{0}] {1}" -f $member.action, $member.name
-                                            MemberSid = "[{0}] {1}" -f $member.action, $member.sid
+                                            MemberName = "[{0}] {1}" -f $member.action, $memberName
+                                            MemberSid = "[{0}] {1}" -f $member.action, $memberSid
                                             LocalGroupName = $group.Properties.groupName
                                             LocalGroupSid = $group.Properties.groupSid
                                             SettingType = "Preferences:LocalUsersAndGroups"
