@@ -7,23 +7,25 @@ function Get-GpoReport_GpoAcls {
         [switch]$AsCsvFile
     )
 
-    Get-GPO -All -Domain $Domain | 
-        ForEach-Object {
-            $gpo = $_
-            $gpo | Get-GPPermission -All -Domain $Domain | foreach {
-                $ace = $_
-                New-Object -TypeName psobject -Property @{
-                    Gpo_DisplayName = $gpo.DisplayName
-                    Gpo_Id = $gpo.Id
-                    Trustee_Domain = $ace.Trustee.Domain
-                    Trustee_Name = $ace.Trustee.Name
-                    Trustee_Sid = $ace.Trustee.Sid
-                    Trustee_SidType = $ace.Trustee.SidType
-                    Permission = $ace.Permission
-                    Inherited = $ace.Inherited
+    $sb = {
+        Get-GPO -All -Domain $Domain | 
+            ForEach-Object {
+                $gpo = $_
+                $gpo | Get-GPPermission -All -Domain $Domain | foreach {
+                    $ace = $_
+                    New-Object -TypeName psobject -Property @{
+                        Gpo_DisplayName = $gpo.DisplayName
+                        Gpo_Id = $gpo.Id
+                        Trustee_Domain = $ace.Trustee.Domain
+                        Trustee_Name = $ace.Trustee.Name
+                        Trustee_Sid = $ace.Trustee.Sid
+                        Trustee_SidType = $ace.Trustee.SidType
+                        Permission = $ace.Permission
+                        Inherited = $ace.Inherited
+                    }
                 }
             }
-        }
+    }
 
     if ($AsCsvFile) {
         & $sb | 
