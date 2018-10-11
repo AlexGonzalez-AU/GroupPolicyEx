@@ -13,8 +13,10 @@ function Get-GpoReport_GpoInheritanceBlockedOus {
                 Write-Host ("Checking: '{0}'..." -f $_.canonicalName)
                 $_ | Get-GPInheritance -Domain $Domain
             } | 
-            Where-Object {
-                $_.GpoInheritanceBlocked
+            Select-Object -Property Name, ContainerType, Path, GpoInheritanceBlocked, @{
+                n = "GpoLinks"; e = {($_ | Select-Object -ExpandProperty GpoLinks | Sort-Object -Property Order | Select-Object -ExpandProperty DisplayName) -join "`n"}
+            }, @{
+                n = "InheritedGpoLinks"; e = {($_ | Select-Object -ExpandProperty InheritedGpoLinks | Sort-Object -Property Order | Select-Object -ExpandProperty DisplayName) -join "`n"}
             }
     }
 
