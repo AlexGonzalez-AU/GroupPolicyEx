@@ -10,24 +10,24 @@ function Get-GpoReport_GpoLinks {
     Set-StrictMode -Version 2
     $ErrorActionPreference = 'Stop'
 
-    function Test-XmlProperty {
-        [CmdletBinding()]
-
-        param (
-            [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-            $XmlPath,
-            [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-            [string]$Property
-        )
-
-        [string[]]$properties = $XmlPath | 
-            Get-Member -MemberType Properties | 
-            Select-Object -ExpandProperty Name
-
-        $properties -Contains($Property)
-    }
-
     $sb = {
+        function Test-XmlProperty {
+            [CmdletBinding()]
+
+            param (
+                [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+                $XmlPath,
+                [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+                [string]$Property
+            )
+
+            [string[]]$properties = $XmlPath | 
+                Get-Member -MemberType Properties | 
+                Select-Object -ExpandProperty Name
+
+            $properties -Contains($Property)
+        }
+
         foreach ($gpo in (Get-GPO -All -Domain $Domain)) {
             if (!$gpo.displayname) {
                 Write-Warning -Message ("GPO is missing from SYSVOL '{0}'" -f $gpo.id.guid)
