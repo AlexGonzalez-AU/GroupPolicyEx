@@ -32,7 +32,10 @@ function Backup-Gpo {
                 Export-Csv -Append -NoTypeInformation -Path (Join-Path -Path $Path -ChildPath 'ace.config.csv')
             $InputObject | 
                 Get-GpoLink |
-                Export-Csv -Append -NoTypeInformation -Path (Join-Path -Path $Path -ChildPath 'link.config.csv')                
+                Export-Csv -Append -NoTypeInformation -Path (Join-Path -Path $Path -ChildPath 'link.config.csv')  
+            $InputObject | 
+                Get-GpoWmiFilter |
+                Export-Csv -Append -NoTypeInformation -Path (Join-Path -Path $Path -ChildPath 'wmifilter.config.csv')                                 
         }
     }
     end {

@@ -75,8 +75,8 @@
         '..\CmdLets\Set-GpoPermission.psm1',
         '..\CmdLets\Get-GpoLink.psm1',
         '..\CmdLets\Set-GpoLink.psm1',
-        '..\CmdLets\Get-GpoWmiFiler.psm1',
-        '..\CmdLets\Set-GpoWmiFiler.psm1',
+        '..\CmdLets\Get-GpoWmiFilter.psm1',
+        '..\CmdLets\Set-GpoWmiFilter.psm1',
         '..\CmdLets\Backup-Gpo.psm1',
         '..\CmdLets\Restore-Gpo.psm1',
         '..\CmdLets\New-GpoMigrationTable.psm1'

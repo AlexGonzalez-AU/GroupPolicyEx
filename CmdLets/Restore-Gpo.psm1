@@ -9,20 +9,23 @@ function Restore-Gpo {
         $LinksOnly,
         [Parameter(Mandatory=$false,ValueFromPipeline=$false,Position=2)]
         [switch]
-        $PermissionsOnly,  
-        [Parameter(Mandatory=$false,ValueFromPipeline=$false,Position=3,ParameterSetName='Parameter Set 1')]
+        $WmiFiltersOnly,        
+        [Parameter(Mandatory=$false,ValueFromPipeline=$false,Position=3)]
+        [switch]
+        $PermissionsOnly,
+        [Parameter(Mandatory=$false,ValueFromPipeline=$false,Position=4,ParameterSetName='Parameter Set 1')]
         [switch]
         $DoNotMigrateSAMAccountName,
-        [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=4,ParameterSetName='Parameter Set 2')]
+        [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=5,ParameterSetName='Parameter Set 2')]
         [switch]
         $MigrateSAMAccountNameSameAsSource,          
-        [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=5,ParameterSetName='Parameter Set 3')]
+        [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=6,ParameterSetName='Parameter Set 3')]
         [switch]
         $MigrateSAMAccountNameByRelativeName,         
-        [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=6,ParameterSetName='Parameter Set 4')]
+        [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=7,ParameterSetName='Parameter Set 4')]
         [switch]
         $MigrateSAMAccountNameUsingMigrationTable,
-        [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=7,ParameterSetName='Parameter Set 4')]
+        [Parameter(Mandatory=$true,ValueFromPipeline=$false,Position=8,ParameterSetName='Parameter Set 4')]
         [string]
         $MigrationTable
     )
@@ -52,7 +55,7 @@ function Restore-Gpo {
         }
     }
     process {
-        if ((-not $LinksOnly) -and (-not $PermissionsOnly)) {
+        if ((-not $LinksOnly) -and (-not $WmiFiltersOnly) -and (-not $PermissionsOnly)) {
             Import-Csv -Path (Join-Path -Path $Path -ChildPath 'policy.config.csv') | 
                 ForEach-Object {
                     Write-Verbose -Message ("[    ] Restore-Gpo : {0}" -f $_.DisplayName)
@@ -63,7 +66,7 @@ function Restore-Gpo {
                         GroupPolicy\Import-GPO -CreateIfNeeded -BackupGpoName $_.DisplayName -TargetName $_.DisplayName -Path $Path
                     }
                 }
-            $LinksOnly = $PermissionsOnly = $true
+            $LinksOnly = $WmiFiltersOnly = $PermissionsOnly = $true
         }
 
         if ($PermissionsOnly) {
@@ -82,6 +85,13 @@ function Restore-Gpo {
                     $_.Parent_distinguishedName = $_.Parent_distinguishedName.SubString(0,$_.Parent_distinguishedName.ToUpper().IndexOf('DC=')) + ([adsi]"LDAP://RootDSE").defaultNamingContext
                     $_ | Set-GpoPermission -Force -Verbose:$VerbosePreference
                 }
+        }
+
+        if ($WmiFiltersOnly) {
+            Import-Csv -Path (Join-Path -Path $Path -ChildPath 'wmifilter.config.csv') | 
+                ForEach-Object {        
+                    $_ | Set-GpoWmiFilter -Verbose:$VerbosePreference
+                }   
         }
 
         if ($LinksOnly) {
