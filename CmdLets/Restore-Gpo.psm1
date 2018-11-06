@@ -30,7 +30,7 @@ function Restore-Gpo {
 
     begin {
         $netBiosName_source = Get-Content (Join-Path -Path $Path -ChildPath 'netbiosname').trim()
-        $netBiosName_target = Get-ADObject -SearchBase ('CN=Partitions,CN=Configuration,' + ([adsi]'LDAP://RootDSE').defaultNamingContext) -Filter * -Properties netbiosname | 
+        $netBiosName_target = ActiveDirectory\Get-ADObject -SearchBase ('CN=Partitions,CN=Configuration,' + ([adsi]'LDAP://RootDSE').defaultNamingContext) -Filter * -Properties netbiosname | 
             Select-Object -ExpandProperty netbiosname
 
         if ($DoNotMigrateSAMAccountName) {

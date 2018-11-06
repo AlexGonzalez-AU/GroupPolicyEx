@@ -39,7 +39,7 @@ function Backup-Gpo {
         }
     }
     end {
-        Get-ADObject -SearchBase ('CN=Partitions,CN=Configuration,' + ([adsi]'LDAP://RootDSE').defaultNamingContext) -Filter * -Properties netbiosname | 
+        ActiveDirectory\Get-ADObject -SearchBase ('CN=Partitions,CN=Configuration,' + ([adsi]'LDAP://RootDSE').defaultNamingContext) -Filter * -Properties netbiosname | 
             Select-Object -ExpandProperty netbiosname |
             Out-File -FilePath (Join-Path -Path $Path -ChildPath 'netbiosname')
 

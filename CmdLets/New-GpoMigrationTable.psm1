@@ -10,7 +10,7 @@ function New-GpoMigrationTable {
     )
 
     begin {
-        $netbiosname = Get-ADObject -SearchBase ('CN=Partitions,CN=Configuration,' + ([adsi]'LDAP://RootDSE').defaultNamingContext) -Filter * -Properties netbiosname | 
+        $netbiosname = ActiveDirectory\Get-ADObject -SearchBase ('CN=Partitions,CN=Configuration,' + ([adsi]'LDAP://RootDSE').defaultNamingContext) -Filter * -Properties netbiosname | 
             Select-Object -ExpandProperty netbiosname
         
         [string[]]$samAccountNames = @()
@@ -30,7 +30,7 @@ function New-GpoMigrationTable {
             ForEach-Object {
                 if (-not ($samAccountNames -contains $_)) {
                     $samAccountNames += $_
-                    $o = Get-ADObject -LDAPFilter ("(samAccountName={0})" -f ($_ | Split-Path -Leaf))
+                    $o = ActiveDirectory\Get-ADObject -LDAPFilter ("(samAccountName={0})" -f ($_ | Split-Path -Leaf))
 
                     switch ($o | Select-Object -ExpandProperty ObjectClass) {
                         'user'          {$type = 'User'}

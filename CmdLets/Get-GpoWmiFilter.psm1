@@ -13,7 +13,7 @@ function Get-GpoWmiFilter {
         if ($InputObject.WmiFilter) {
             $wmiFilterGuid = $InputObject.WmiFilter.Path.Split("{")[1].Split("}")[0]
 
-            $objWmiFilter = Get-ADObject -LDAPFilter "(&(objectClass=msWMI-Som)(Name={$wmiFilterGuid}))" `
+            $objWmiFilter = ActiveDirectory\Get-ADObject -LDAPFilter "(&(objectClass=msWMI-Som)(Name={$wmiFilterGuid}))" `
                 -Properties "msWMI-Name", "msWMI-Parm1", "msWMI-Parm2"
 
             $wmiFilterName        = $objWmiFilter | Select-Object -ExpandProperty "msWMI-Name"

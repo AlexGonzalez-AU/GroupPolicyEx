@@ -11,7 +11,7 @@ function Set-GpoWmiFilter {
     process {
         Write-Verbose -Message ("[    ] Set-GpoWmiFilter : {0} -> {1}" -f $InputObject.WmiFilterName, $InputObject.DisplayName)
 
-        $objWmiFilter = Get-ADObject -LDAPFilter "(&(objectClass=msWMI-Som)(msWMI-Name=$($InputObject.WmiFilterName)))" `
+        $objWmiFilter = ActiveDirectory\Get-ADObject -LDAPFilter "(&(objectClass=msWMI-Som)(msWMI-Name=$($InputObject.WmiFilterName)))" `
                 -Properties "msWMI-Name", "msWMI-Parm1", "msWMI-Parm2"
 
         if (($objWmiFilter | Measure-Object).Count -gt 1) {
@@ -65,7 +65,7 @@ function Set-GpoWmiFilter {
             New-ADObject -Name "{$guid}" -Type "msWMI-Som" -Path ("CN=SOM,CN=WMIPolicy,CN=System,$defaultNamingContext") -OtherAttributes $otherAttributes -PassThru
         }
 
-        $objWmiFilter = Get-ADObject -LDAPFilter "(&(objectClass=msWMI-Som)(msWMI-Name=$($InputObject.wmiFilterName)))" `
+        $objWmiFilter = ActiveDirectory\Get-ADObject -LDAPFilter "(&(objectClass=msWMI-Som)(msWMI-Name=$($InputObject.wmiFilterName)))" `
             -Properties "msWMI-Name", "msWMI-Parm1", "msWMI-Parm2"
 
         $gpDomain = New-Object -Type Microsoft.GroupPolicy.GPDomain
