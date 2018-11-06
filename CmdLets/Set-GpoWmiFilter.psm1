@@ -43,7 +43,7 @@ function Set-GpoWmiFilter {
             $guid = [System.Guid]::NewGuid()
             $msWMICreationDate = (Get-Date).ToUniversalTime().ToString("yyyyMMddhhmmss.ffffff-000")
             
-            $Attr = @{
+            $otherAttributes = @{
                 "msWMI-Name" = $InputObject.wmiFilterName;
                 "msWMI-Parm1" = $InputObject.WmiFilterDescription;
                 "msWMI-Parm2" = $InputObject.wmiFilterQueryList;
@@ -54,8 +54,15 @@ function Set-GpoWmiFilter {
                 "msWMI-ChangeDate" = $msWMICreationDate; 
                 "msWMI-CreationDate" = $msWMICreationDate
             }
+
+            if ($InputObject.WmiFilterDescription -eq $null) { 
+                $otherAttributes.Remove("msWMI-Parm1") 
+            }
+            if ($InputObject.wmiFilterQueryList -eq $null) {
+                $otherAttributes.Remove("msWMI-Parm2") 
+            }
                 
-            New-ADObject -Name "{$guid}" -Type "msWMI-Som" -Path ("CN=SOM,CN=WMIPolicy,CN=System,$defaultNamingContext") -OtherAttributes $Attr -PassThru
+            New-ADObject -Name "{$guid}" -Type "msWMI-Som" -Path ("CN=SOM,CN=WMIPolicy,CN=System,$defaultNamingContext") -OtherAttributes $otherAttributes -PassThru
         }
 
         $objWmiFilter = Get-ADObject -LDAPFilter "(&(objectClass=msWMI-Som)(msWMI-Name=$($InputObject.wmiFilterName)))" `
