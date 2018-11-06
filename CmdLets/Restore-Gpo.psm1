@@ -89,7 +89,13 @@ function Restore-Gpo {
 
         if ($WmiFiltersOnly) {
             Import-Csv -Path (Join-Path -Path $Path -ChildPath 'wmifilter.config.csv') | 
-                ForEach-Object {        
+                ForEach-Object {
+                    if ($_.WmiFilterDescription.Length -lt 1) {
+                        $_.WmiFilterDescription = $null
+                    }
+                    if ($_.WmiFilterQueryList.Length -lt 1) {
+                        $_.WmiFilterQueryList = $null
+                    }        
                     $_ | Set-GpoWmiFilter -Verbose:$VerbosePreference
                 }   
         }
