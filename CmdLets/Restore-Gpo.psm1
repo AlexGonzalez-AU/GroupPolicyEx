@@ -66,7 +66,7 @@ function Restore-Gpo {
                 }
         }
 
-        if ($IncludePermissions -or $PermissionsOnly) {
+        if (($IncludePermissions -or $PermissionsOnly) -and (-not $LinksOnly) -and (-not $WmiFiltersOnly)) {
             Import-Csv -Path (Join-Path -Path $Path -ChildPath 'ace.config.csv') | 
                 ForEach-Object {
                     if ($_.IsInherited -eq 'False') {
@@ -84,7 +84,7 @@ function Restore-Gpo {
                 }
         }
 
-        if ($IncludeWmiFilters -or $WmiFiltersOnly) {
+        if (($IncludeWmiFilters -or $WmiFiltersOnly) -and (-not $LinksOnly) -and (-not $PermissionsOnly)) {
             Import-Csv -Path (Join-Path -Path $Path -ChildPath 'wmifilter.config.csv') | 
                 ForEach-Object {
                     if ($_.WmiFilterDescription.Length -lt 1) {
@@ -97,7 +97,7 @@ function Restore-Gpo {
                 }   
         }
 
-        if ($IncludeLinks -or $LinksOnly) {
+        if (($IncludeLinks -or $LinksOnly) -and (-not $WmiFiltersOnly) -and (-not $PermissionsOnly)) {
             Import-Csv -Path (Join-Path -Path $Path -ChildPath 'link.config.csv') | 
                 ForEach-Object {        
                     $_.LinkTarget = $_.LinkTarget.SubString(0,$_.LinkTarget.ToUpper().IndexOf('DC=')) + ([adsi]"LDAP://RootDSE").defaultNamingContext
